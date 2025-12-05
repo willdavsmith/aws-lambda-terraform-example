@@ -106,8 +106,8 @@ terraform {
 
 provider "aws" {
   region = var.region
-  access_key = var.context.properties.access_key
-  secret_key = var.context.properties.secret_key
+  access_key = var.context.access_key
+  secret_key = var.context.secret_key
 }
 
 # IAM role for the Lambda function with basic execution permissions.
@@ -149,7 +149,7 @@ resource "aws_lambda_function" "container" {
   function_name = var.function_name
   role          = aws_iam_role.lambda_exec.arn
   package_type  = "Image"
-  image_uri     = var.context.properties.image
+  image_uri     = var.context.image
 
   architectures = var.architectures
   timeout       = var.timeout

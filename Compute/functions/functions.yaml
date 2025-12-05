@@ -40,4 +40,8 @@ types:
             location:
               type: string
               description: "(Required) The Azure region where the function will be deployed."
+            access_key:
+              type: string
+            secret_key:
+              type: string
           required: [environment, image]
