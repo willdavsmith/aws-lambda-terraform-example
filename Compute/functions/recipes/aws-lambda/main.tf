@@ -106,6 +106,8 @@ terraform {
 
 provider "aws" {
   region = var.region
+  access_key = var.context.properties.access_key
+  secret_key = var.context.properties.secret_key
 }
 
 # IAM role for the Lambda function with basic execution permissions.
