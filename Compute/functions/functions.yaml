@@ -17,7 +17,6 @@ types:
           application: myApp.id
           environment: environment
           image: 'ghcr.io/your-org/hello-func:latest'
-          location: 'westus2'
         }
       }
       ```
@@ -36,12 +35,21 @@ types:
               description: "(Optional) The Radius Application ID. For example, `myApp.id`."
             image:
               type: string
-              description: "(Required) Container image URI for the function (public or authenticated as supported by your runtime)."
-            location:
+              description: "(Optional) Container image URI for the function (public or authenticated as supported by your runtime)."
+            functionPath:
               type: string
-              description: "(Required) The Azure region where the function will be deployed."
-            access_key:
-              type: string
-            secret_key:
-              type: string
+              description: '(Optional) The path to the function within the container image.'
+            connections:
+              type: object
+              description: '(Optional) Map of resources this function is dependent upon. `db: { source: db.id } for example.'
+              additionalProperties:
+                type: object
+                properties:
+                  source:
+                    type: string
+                    description: (Required) The resource ID of the resource this container is dependent upon.
+                  disableDefaultEnvVars:
+                    type: boolean
+                    description: (Optional) Disables the automatic injection of environment variables from connected resource properties.
+                required: [source]
           required: [environment, image]

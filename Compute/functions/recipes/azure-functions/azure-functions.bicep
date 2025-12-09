@@ -4,9 +4,28 @@ param context object
 var prefix string = toLower(uniqueString('${context.resource.id}'))
 var name string = 'func${prefix}'
 
+// var location = resourceGroup().location
+var location = 'eastus'
+
+// Extract connection data from linked resources
+var resourceConnections = context.resource.connections ?? {}
+
+// Build environment variables from connections unless explicitly disabled via disableDefaultEnvVars
+// Each connection's output values become CONNECTION_<CONNECTION_NAME>_<PROPERTY_NAME>
+var connectionEnvVars = reduce(items(resourceConnections), [], (acc, conn) => 
+  conn.value.?disableDefaultEnvVars != true
+    ? concat(acc, reduce(items(conn.value.?status.?computedValues ?? {}), [], (envAcc, prop) => 
+        concat(envAcc, [{
+          name: toUpper('CONNECTION_${conn.key}_${prop.key}')
+          value: string(prop.value)
+        }])
+      ))
+    : acc
+)
+
 resource storage 'Microsoft.Storage/storageAccounts@2022-09-01' = {
   name: '${name}storage'
-  location: context.resource.properties.location
+  location: location
   sku: {
     name: 'Standard_LRS'
   }
@@ -20,7 +39,7 @@ resource storage 'Microsoft.Storage/storageAccounts@2022-09-01' = {
 
 resource plan 'Microsoft.Web/serverfarms@2023-12-01' = {
   name: '${name}plan'
-  location: context.resource.properties.location
+  location: location
   kind: 'functionapp'
   sku: {
     name: 'EP1'
@@ -36,7 +55,7 @@ resource plan 'Microsoft.Web/serverfarms@2023-12-01' = {
 
 resource functionApp 'Microsoft.Web/sites@2023-12-01' = {
   name: '${name}func'
-  location: context.resource.properties.location
+  location: location
   kind: 'functionapp,linux'
   identity: {
     type: 'SystemAssigned'
@@ -47,7 +66,7 @@ resource functionApp 'Microsoft.Web/sites@2023-12-01' = {
     siteConfig: {
       linuxFxVersion: 'DOCKER|${context.resource.properties.image}'
       alwaysOn: true
-      appSettings: [
+      appSettings: concat([
         {
           name: 'FUNCTIONS_WORKER_RUNTIME'
           value: 'node'
@@ -68,16 +87,17 @@ resource functionApp 'Microsoft.Web/sites@2023-12-01' = {
           name: 'WEBSITES_PORT'
           value: '80'
         }
-      ]
+        {
+          name: 'TEST1'
+          value: 'TEST2'
+        }
+      ], connectionEnvVars)
     }
   }
 }
 
 output result object = {
   values: {
-    functionAppName: functionApp.name
-    defaultHostname: functionApp.properties.defaultHostName
-    functionAppUrl: 'https://${functionApp.properties.defaultHostName}/api/hello'
-    storageAccountName: storage.name
+    functionURL: 'https://${functionApp.properties.defaultHostName}/${context.resource.properties.functionPath}'
   } 
 }
