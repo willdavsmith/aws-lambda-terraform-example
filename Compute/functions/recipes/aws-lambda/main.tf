@@ -143,6 +143,18 @@ resource "aws_cloudwatch_log_group" "lambda_logs" {
 
 locals {
   use_image_config = length(var.image_command) > 0 || length(var.image_entry_point) > 0 || var.image_working_directory != null
+  connections      = try(var.context.resource.connections, {})
+  connection_env_vars = flatten([
+    for conn_name, conn in local.connections :
+    try(conn.disableDefaultEnvVars, false) ? [] : [
+      for prop_name, prop_value in try(conn.status.computedValues, {}) : {
+        name  = upper("CONNECTION_${conn_name}_${prop_name}")
+        value = tostring(prop_value)
+      }
+    ]
+  ])
+  connection_env_map = { for env in local.connection_env_vars : env.name => env.value }
+  merged_environment = merge(var.environment, local.connection_env_map)
 }
 
 resource "aws_lambda_function" "container" {
@@ -156,9 +168,9 @@ resource "aws_lambda_function" "container" {
   memory_size   = var.memory_size
 
   dynamic "environment" {
-    for_each = length(var.environment) > 0 ? [1] : []
+    for_each = length(local.merged_environment) > 0 ? [1] : []
     content {
-      variables = var.environment
+      variables = local.merged_environment
     }
   }
 
