@@ -37,12 +37,6 @@ data "aws_subnets" "selected" {
   }
 }
 
-variable "tags" {
-  description = "Additional tags to apply to the Lambda function and related resources."
-  type        = map(string)
-  default     = {}
-}
-
 // -----VARIABLES----- //
 
 locals {
@@ -88,7 +82,10 @@ locals {
 
   log_retention_in_days = try(var.context.resource.properties.logRetentionInDays, 30)
 
-  tags = var.context.resource.properties.tags
+  // TEMP: Credentials
+
+  aws_access_key = try(var.context.resource.properties.aws_access_key, null)
+  aws_secret_key = try(var.context.resource.properties.aws_secret_key, null)
 
   // TODO: Add more properties: https://registry.terraform.io/providers/hashicorp/aws/latest/docs/resources/lambda_function
 }
@@ -96,6 +93,8 @@ locals {
 // TRY DELETE THIS BLOCK
 provider "aws" {
   region = var.context.aws.region
+  access_key = local.aws_access_key
+  secret_key = local.aws_secret_key
 }
 
 # IAM role for the Lambda function with basic execution permissions.
@@ -114,8 +113,6 @@ resource "aws_iam_role" "lambda_exec" {
       }
     ]
   })
-
-  tags = local.tags
 }
 
 resource "aws_iam_role_policy_attachment" "lambda_basic_execution" {
@@ -126,7 +123,6 @@ resource "aws_iam_role_policy_attachment" "lambda_basic_execution" {
 resource "aws_cloudwatch_log_group" "lambda_logs" {
   name              = "/aws/lambda/${local.function_name}"
   retention_in_days = local.log_retention_in_days
-  tags              = local.tags
 }
 
 resource "aws_lambda_function" "container" {
@@ -164,8 +160,6 @@ resource "aws_lambda_function" "container" {
     aws_iam_role_policy_attachment.lambda_basic_execution,
     aws_cloudwatch_log_group.lambda_logs
   ]
-
-  tags = local.tags
 }
 
 resource "aws_lambda_function_url" "default" {
