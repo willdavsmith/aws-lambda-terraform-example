@@ -40,7 +40,7 @@ data "aws_subnets" "selected" {
 // -----VARIABLES----- //
 
 locals {
-  connections = try(var.context.resource.connections, {})
+  connections = try(var.context.resource.properties.connections, {})
   connection_env_vars = flatten([
     for conn_name, conn in local.connections :
     try(conn.disableDefaultEnvVars, false) ? [] : [
