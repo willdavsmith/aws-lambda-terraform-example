@@ -80,8 +80,6 @@ locals {
 
   function_url_authorization_type = try(var.context.resource.properties.functionUrlAuthorizationType, "NONE")
 
-  log_retention_in_days = try(var.context.resource.properties.logRetentionInDays, 30)
-
   // TEMP: Credentials
 
   aws_access_key = try(var.context.resource.properties.aws_access_key, null)
@@ -125,11 +123,6 @@ resource "aws_iam_role_policy_attachment" "lambda_vpc_access" {
   policy_arn = "arn:aws:iam::aws:policy/service-role/AWSLambdaVPCAccessExecutionRole"
 }
 
-resource "aws_cloudwatch_log_group" "lambda_logs" {
-  name              = "/aws/lambda/${local.function_name}"
-  retention_in_days = local.log_retention_in_days
-}
-
 resource "aws_lambda_function" "container" {
   function_name = local.function_name
   role          = aws_iam_role.lambda_exec.arn
@@ -164,7 +157,6 @@ resource "aws_lambda_function" "container" {
   depends_on = [
     aws_iam_role_policy_attachment.lambda_basic_execution,
     aws_iam_role_policy_attachment.lambda_vpc_access,
-    aws_cloudwatch_log_group.lambda_logs
   ]
 }
 
