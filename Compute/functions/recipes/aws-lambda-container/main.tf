@@ -1,8 +1,6 @@
 // -----PROVIDER CONFIGURATION----- //
 
 terraform {
-  required_version = ">= 1.5.0"
-
   required_providers {
     aws = {
       source  = "hashicorp/aws"
@@ -37,10 +35,17 @@ data "aws_subnets" "selected" {
   }
 }
 
+// TODO DELETE ME
+variable "environment" {
+  description = "Environment variables for the Lambda function."
+  type        = map(string)
+  default     = {}
+}
+
 // -----VARIABLES----- //
 
 locals {
-  connections = try(var.context.resource.properties.connections, {})
+  connections      = try(var.context.resource.connections, {})
   connection_env_vars = flatten([
     for conn_name, conn in local.connections :
     try(conn.disableDefaultEnvVars, false) ? [] : [
@@ -51,6 +56,7 @@ locals {
     ]
   ])
   connection_env_map = { for env in local.connection_env_vars : env.name => env.value }
+  merged_environment = merge(var.environment, local.connection_env_map)
 
   vpc_id = var.vpc_id
 
@@ -86,13 +92,6 @@ locals {
   aws_secret_key = try(var.context.resource.properties.aws_secret_key, null)
 
   // TODO: Add more properties: https://registry.terraform.io/providers/hashicorp/aws/latest/docs/resources/lambda_function
-}
-
-// TRY DELETE THIS BLOCK
-provider "aws" {
-  region = var.context.aws.region
-  access_key = local.aws_access_key
-  secret_key = local.aws_secret_key
 }
 
 # IAM role for the Lambda function with basic execution permissions.
@@ -139,9 +138,9 @@ resource "aws_lambda_function" "container" {
   }
 
   dynamic "environment" {
-    for_each = length(local.connection_env_map) > 0 ? [1] : []
+    for_each = length(local.merged_environment) > 0 ? [1] : []
     content {
-      variables = local.connection_env_map
+      variables = local.merged_environment
     }
   }
 
