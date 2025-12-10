@@ -25,8 +25,8 @@ variable "vpc_id" {
   type        = string
 }
 
-variable "security_group_ids" {
-  description = "The IDs of the security groups to associate with the Lambda function."
+variable "security_group_id" {
+  description = "The ID of the security group to associate with the Lambda function."
   type        = string
 }
 
@@ -62,7 +62,7 @@ locals {
 
   subnet_ids = data.aws_subnets.selected.ids
 
-  security_group_ids = var.security_group_ids
+  security_group_ids = [ var.security_group_id ]
 
   function_name = var.context.resource.name
 
@@ -93,8 +93,9 @@ locals {
   // TODO: Add more properties: https://registry.terraform.io/providers/hashicorp/aws/latest/docs/resources/lambda_function
 }
 
+// TRY DELETE THIS BLOCK
 provider "aws" {
-  region = context.aws.region
+  region = var.context.aws.region
 }
 
 # IAM role for the Lambda function with basic execution permissions.
